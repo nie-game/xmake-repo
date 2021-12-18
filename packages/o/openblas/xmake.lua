@@ -27,7 +27,8 @@ package("openblas")
         add_versions("0.3.17", "df2934fa33d04fd84d839ca698280df55c690c86a5a1133b3f7266fce1de279f")
         add_versions("0.3.18", "1632c1e8cca62d8bed064b37747e331a1796fc46f688626337362bf0d16aeadb")
 
-        add_configs("with_fortran", {description="Compile with fortran enabled.", default = is_plat("linux"), type = "boolean"})
+        add_configs("with_fortran", {description = "Compile with fortran enabled.", default = is_plat("linux"), type = "boolean"})
+        add_configs("with_openmp",  {description = "Compile with OpenMP enabled.", default = true, type = "boolean"})
     end
 
     if is_plat("linux") then
@@ -40,6 +41,9 @@ package("openblas")
         if package:config("with_fortran") then
             package:add("syslinks", "gfortran")
         end
+        if package:config("with_openmp") then
+            package:add("deps", "openmp")
+        end
     end)
 
     on_install("windows", function (package)
@@ -51,7 +55,8 @@ package("openblas")
 
     on_install("macosx", "linux", "mingw@windows,msys", function (package)
         local configs = {}
-        if package:config("debug") then table.insert(configs, "DEBUG=1") end
+        if package:debug() then table.insert(configs, "DEBUG=1") end
+        if package:config("with_openmp") then table.insert(configs, "USE_OPENMP=1") end
         if not package:config("shared") then
             table.insert(configs, "NO_SHARED=1")
         else
