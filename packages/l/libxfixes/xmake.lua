@@ -7,7 +7,7 @@ package("libxfixes")
     add_versions("5.0.3", "de1cd33aff226e08cefd0e6759341c2c8e8c9faf8ce9ac6ec38d43e287b22ad6")
 
     if is_plat("linux") then
-        add_extsources("apt::libxfixes-dev")
+        add_extsources("apt::libxfixes-dev", "pacman::libxfixes")
     end
 
     if is_plat("macosx", "linux") then
@@ -19,6 +19,11 @@ package("libxfixes")
                          "--localstatedir=" .. package:installdir("var"),
                          "--disable-dependency-tracking",
                          "--disable-silent-rules"}
+        table.insert(configs, "--enable-static=" .. (package:config("shared") and "no" or "yes"))
+        table.insert(configs, "--enable-shared=" .. (package:config("shared") and "yes" or "no"))
+        if package:config("pic") then
+            table.insert(configs, "--with-pic")
+        end
         import("package.tools.autoconf").install(package, configs)
     end)
 

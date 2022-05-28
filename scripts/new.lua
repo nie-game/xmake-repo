@@ -99,7 +99,7 @@ function _generate_package_from_github(reponame)
                 has_cmake = true
             elseif filename == "configure" then
                 has_autoconf = true
-            elseif filename == "autogen.sh" then
+            elseif filename == "autogen.sh" or filename == "configure.ac" then
                 need_autogen = true
                 has_autoconf = true
             elseif filename == "meson.build" then
@@ -118,7 +118,7 @@ function _generate_package_from_github(reponame)
         file:print('    add_deps("meson", "ninja")')
     elseif need_autogen then
         file:print("")
-        file:print('    add_deps("autoconf", "automake")')
+        file:print('    add_deps("autoconf", "automake", "libtool")')
     end
 
     -- generate install scripts
@@ -137,6 +137,7 @@ function _generate_package_from_github(reponame)
         file:print('        if package:is_plat("linux") and package:config("pic") ~= false then')
         file:print('            table.insert(configs, "--with-pic")')
         file:print('        end')
+        file:print('        import("package.tools.autoconf").install(package, configs)')
     elseif has_meson then
         file:print('        table.insert(configs, "-Ddefault_library=" .. (package:config("shared") and "shared" or "static"))')
         file:print('        import("package.tools.meson").install(package, configs)')

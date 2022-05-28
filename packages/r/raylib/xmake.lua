@@ -3,7 +3,7 @@ package("raylib")
     set_homepage("http://www.raylib.com")
     set_description("A simple and easy-to-use library to enjoy videogames programming.")
 
-    if is_plat("macosx") then
+    if is_plat("macosx") and is_arch("x86_64") then
         add_urls("https://github.com/raysan5/raylib/releases/download/$(version).tar.gz", {version = function (version)
             if version:ge("3.5.0") then
                 return version .. "/raylib-" .. version .. "_macos"
@@ -26,13 +26,13 @@ package("raylib")
         add_versions("4.0.0", "11f6087dc7bedf9efb3f69c0c872f637e421d914e5ecea99bbe7781f173dc38c")
     end
 
-    if not is_plat("macosx") then
+    if not (is_plat("macosx") and is_arch("x86_64")) then
         add_deps("cmake >=3.11")
     end
 
     if is_plat("macosx") then
         add_frameworks("CoreVideo", "CoreGraphics", "AppKit", "IOKit", "CoreFoundation", "Foundation")
-    elseif is_plat("windows") then
+    elseif is_plat("windows", "mingw") then
         add_syslinks("gdi32", "user32", "winmm", "shell32")
     elseif is_plat("linux") then
         add_syslinks("pthread", "dl", "m")
@@ -40,12 +40,12 @@ package("raylib")
     end
     add_deps("opengl", {optional = true})
 
-    on_install("macosx", function (package)
+    on_install("macosx|x86_64", function (package)
         os.cp("include/raylib.h", package:installdir("include"))
         os.cp("lib/libraylib.a", package:installdir("lib"))
     end)
 
-    on_install("windows", "linux", function (package)
+    on_install("windows", "linux", "macosx|arm64", "mingw", function (package)
         local configs = {"-DBUILD_EXAMPLES=OFF"}
         table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:debug() and "Debug" or "Release"))
         table.insert(configs, "-DBUILD_SHARED_LIBS=" .. (package:config("shared") and "ON" or "OFF"))
