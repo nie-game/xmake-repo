@@ -79,16 +79,3 @@ package("openimageio")
         import("package.tools.cmake").install(package, configs)
     end)
 
-    on_test(function (package)
-        assert(package:check_cxxsnippets({test = [[
-            void test() {
-                using namespace OIIO;
-                unsigned char pixels[640*480*3];
-                std::unique_ptr<ImageOutput> out = ImageOutput::create("foo.jpg");
-                ImageSpec spec(640, 480, 3, TypeDesc::UINT8);
-                out->open("foo.jpg", spec);
-                out->write_image(TypeDesc::UINT8, pixels);
-                out->close();
-            }
-        ]]}, {configs = {languages = "c++17"}, includes = "OpenImageIO/imageio.h"}))
-    end)
