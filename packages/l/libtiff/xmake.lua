@@ -27,7 +27,3 @@ package("libtiff")
         io.replace("CMakeLists.txt", "add_subdirectory(tools)", "", {plain = true})
         import("package.tools.cmake").install(package, configs)
     end)
-
-    on_test(function (package)
-        assert(package:has_cfuncs("TIFFOpen", {includes = "tiffio.h"}))
-    end)
