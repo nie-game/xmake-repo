@@ -10,6 +10,8 @@ package("boost")
     add_urls("https://github.com/xmake-mirror/boost/releases/download/boost-$(version).tar.bz2", {version = function (version)
             return version .. "/boost_" .. (version:gsub("%.", "_"))
         end})
+    add_versions("1.80.0", "1e19565d82e43bc59209a168f5ac899d3ba471d55c7610c677d4ccf2c9c500c0")
+    add_versions("1.79.0", "475d589d51a7f8b3ba2ba4eda022b170e562ca3b760ee922c146b6c65856ef39")
     add_versions("1.78.0", "8681f175d4bdb26c52222665793eef08490d7758529330f98d3b29dd0735bccc")
     add_versions("1.77.0", "fc9f85fc030e233142908241af7a846e60630aa7388de9a5fafb1f3a26840854")
     add_versions("1.76.0", "f0397ba6e982c4450f27bf32a2a83292aba035b827a5623a14636ea583318c41")
@@ -34,8 +36,7 @@ package("boost")
         add_syslinks("pthread", "dl")
     end
 
-    local libnames = {"filesystem",
-                      "fiber",
+    local libnames = {"fiber",
                       "coroutine",
                       "context",
                       "thread",
@@ -59,6 +60,7 @@ package("boost")
                       "graph_parallel",
                       "json",
                       "log",
+                      "filesystem",
                       "math",
                       "mpi",
                       "nowide",
@@ -72,42 +74,63 @@ package("boost")
         add_configs(libname,    { description = "Enable " .. libname .. " library.", default = (libname == "filesystem"), type = "boolean"})
     end
 
-    on_load("windows", function (package)
-        local vs_runtime = package:config("vs_runtime")
-        for _, libname in ipairs(libnames) do
-            local linkname = (package:config("shared") and "boost_" or "libboost_") .. libname
+    on_load(function (package)
+        function get_linkname(package, libname)
+            local linkname
+            if package:is_plat("windows") then
+                linkname = (package:config("shared") and "boost_" or "libboost_") .. libname
+            else
+                linkname = "boost_" .. libname
+            end
             if package:config("multi") then
                 linkname = linkname .. "-mt"
             end
-            if package:config("shared") then
-                if package:debug() then
+            if package:is_plat("windows") then
+                local vs_runtime = package:config("vs_runtime")
+                if package:config("shared") then
+                    if package:debug() then
+                        linkname = linkname .. "-gd"
+                    end
+                elseif vs_runtime == "MT" then
+                    linkname = linkname .. "-s"
+                elseif vs_runtime == "MTd" then
+                    linkname = linkname .. "-sgd"
+                elseif vs_runtime == "MDd" then
                     linkname = linkname .. "-gd"
                 end
-            elseif vs_runtime == "MT" then
-                linkname = linkname .. "-s"
-            elseif vs_runtime == "MTd" then
-                linkname = linkname .. "-sgd"
-            elseif vs_runtime == "MDd" then
-                linkname = linkname .. "-gd"
             end
-            package:add("links", linkname)
+            return linkname
+        end
+        -- we need the fixed link order
+        local sublibs = {log = {"log_setup", "log"}}
+        for _, libname in ipairs(libnames) do
+            local libs = sublibs[libname]
+            if libs then
+                for _, lib in ipairs(libs) do
+                    package:add("links", get_linkname(package, lib))
+                end
+            else
+                package:add("links", get_linkname(package, libname))
+            end
         end
         -- disable auto-link all libs
-        package:add("defines", "BOOST_ALL_NO_LIB")
+        if package:is_plat("windows") then
+            package:add("defines", "BOOST_ALL_NO_LIB")
+        end
     end)
 
-    on_install("macosx", "linux", "windows", "bsd", "cross", function (package)
+    on_install("macosx", "linux", "windows", "bsd", "mingw", "cross", function (package)
 
         -- force boost to compile with the desired compiler
         local file = io.open("user-config.jam", "a")
         if file then
-            if is_plat("macosx") then
+            if package:is_plat("macosx") then
                 -- we uses ld/clang++ for link stdc++ for shared libraries
                 file:print("using darwin : : %s ;", package:build_getenv("ld"))
-            elseif is_plat("windows") then
+            elseif package:is_plat("windows") then
                 file:print("using msvc : : \"%s\" ;", (package:build_getenv("cxx"):gsub("\\", "\\\\")))
             else
-                file:print("using gcc : : %s ;", package:build_getenv("cxx"))
+                file:print("using gcc : : %s ;", package:build_getenv("cxx"):gsub("\\", "/"))
             end
             file:close()
         end
@@ -143,7 +166,7 @@ package("boost")
             "debug-symbols=" .. (package:debug() and "on" or "off"),
             "link=" .. (package:config("shared") and "shared" or "static")
         }
-        if package:is_arch("x64", "x86_64") then
+        if package:is_arch(".+64.*") then
             table.insert(argv, "address-model=64")
         else
             table.insert(argv, "address-model=32")

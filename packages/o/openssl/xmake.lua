@@ -6,6 +6,10 @@ package("openssl")
     add_urls("https://github.com/openssl/openssl/archive/refs/tags/OpenSSL_$(version).zip", {version = function (version)
         return version:gsub("%.", "_")
     end, excludes = "*/fuzz/*"})
+    add_versions("1.1.1q", "df86e6adcff1c91a85cef139dd061ea40b7e49005e8be16522cf4864bfcf5eb8")
+    add_patches("1.1.1q", path.join(os.scriptdir(), "patches", "1.1.1q.diff"), "cfe6929f9db2719e695be0b61f8c38fe8132544c5c58ca8d07383bfa6c675b7b")
+    add_versions("1.1.1p", "7fe975ffe91d8343ebd021059eeea3c6b1d236c3826b3a08ef59fcbe75069f5b")
+    add_patches("1.1.1p", path.join(os.scriptdir(), "patches", "1.1.1p.diff"), "f102fed5867e143ae3ace1febd0b2725358c614c86328e68022f1ea21491b42c")
     add_versions("1.1.1o", "1cd761790cf576e7f45c17798c47064f0f6756d4fcdbc1e657b0a4d9c60f3a52")
     add_versions("1.1.1n", "614d69141fd622bc3db2adf7c824eaa19c7e532937b2cd7144b850d692f9f150")
     add_versions("1.1.1m", "dab2287910427d82674618d512ba2571401539ca6ed12ab3c3143a0db9fad542")
@@ -77,10 +81,11 @@ package("openssl")
             os.mkdir("fuzz")
         end
         os.vrunv("perl", configs, {envs = buildenvs})
-        import("package.tools.make").install(package)
+        import("package.tools.make").build(package)
+        import("package.tools.make").make(package, {"install_sw"})
     end)
 
-    on_install("linux", "macosx", function (package)
+    on_install("linux", "macosx", "bsd", function (package)
         -- https://wiki.openssl.org/index.php/Compilation_and_Installation#PREFIX_and_OPENSSLDIR
         local buildenvs = import("package.tools.autoconf").buildenvs(package)
         local configs = {"--openssldir=" .. package:installdir(),
@@ -91,8 +96,8 @@ package("openssl")
         end
         os.vrunv("./config", configs, {envs = buildenvs})
         local makeconfigs = {CFLAGS = buildenvs.CFLAGS, ASFLAGS = buildenvs.ASFLAGS}
-        import("package.tools.make").install(package, makeconfigs)
-
+        import("package.tools.make").build(package, makeconfigs)
+        import("package.tools.make").make(package, {"install_sw"})
         if package:config("shared") then
             os.tryrm(path.join(package:installdir("lib"), "*.a"))
         end
@@ -129,7 +134,8 @@ package("openssl")
         local buildenvs = import("package.tools.autoconf").buildenvs(package)
         os.vrunv("./Configure", configs, {envs = buildenvs})
         local makeconfigs = {CFLAGS = buildenvs.CFLAGS, ASFLAGS = buildenvs.ASFLAGS}
-        import("package.tools.make").install(package, makeconfigs)
+        import("package.tools.make").build(package, makeconfigs)
+        import("package.tools.make").make(package, {"install_sw"})
     end)
 
     on_test(function (package)

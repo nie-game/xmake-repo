@@ -14,6 +14,8 @@ local options =
 ,   {'a', "arch",       "kv", nil, "Set the given architecture."                }
 ,   {'m', "mode",       "kv", nil, "Set the given mode."                        }
 ,   {'j', "jobs",       "kv", nil, "Set the build jobs."                        }
+,   {'f', "configs",    "kv", nil, "Set the configs."                           }
+,   {'d', "debugdir",   "kv", nil, "Set the debug source directory."            }
 ,   {nil, "linkjobs",   "kv", nil, "Set the link jobs."                         }
 ,   {nil, "cflags",     "kv", nil, "Set the cflags."                            }
 ,   {nil, "cxxflags",   "kv", nil, "Set the cxxflags."                          }
@@ -93,7 +95,12 @@ function _require_packages(argv, packages)
     if argv.diagnosis then
         table.insert(require_argv, "-D")
     end
-    if argv.shallow then
+    local is_debug = false
+    if argv.debugdir then
+        is_debug = true
+        table.insert(require_argv, "--debugdir=" .. argv.debugdir)
+    end
+    if argv.shallow or is_debug then
         table.insert(require_argv, "--shallow")
     end
     if argv.jobs then
@@ -102,13 +109,27 @@ function _require_packages(argv, packages)
     if argv.linkjobs then
         table.insert(require_argv, "--linkjobs=" .. argv.linkjobs)
     end
-    if argv.mode == "debug" and argv.kind == "shared" then
-        table.insert(require_argv, "--extra={debug=true,configs={shared=true}}")
-    elseif argv.mode == "debug" then
-        table.insert(require_argv, "--extra={debug=true}")
-    elseif argv.kind == "shared" then
-        table.insert(require_argv, "--extra={configs={shared=true}}")
+    local extra = {}
+    if argv.mode == "debug" then
+        extra.debug = true
     end
+    -- Some packages set shared=true as default, so we need to force set
+    -- shared=false to test static build.
+    extra.configs = extra.configs or {}
+    extra.configs.shared = argv.kind == "shared"
+    local configs = argv.configs
+    if configs then
+        extra.system  = false
+        extra.configs = extra.configs or {}
+        local extra_configs, errors = ("{" .. configs .. "}"):deserialize()
+        if extra_configs then
+            table.join2(extra.configs, extra_configs)
+        else
+            raise(errors)
+        end
+    end
+    local extra_str = string.serialize(extra, {indent = false, strip = true})
+    table.insert(require_argv, "--extra=" .. extra_str)
     table.join2(require_argv, packages)
     os.vexecv("xmake", require_argv)
 end
@@ -123,7 +144,7 @@ function _package_is_supported(argv, packagename)
             if package and packagename:split("%s+")[1] == package.name then
                 local arch = argv.arch
                 if not arch and plat ~= os.subhost() then
-                    arch = platform.archs(plat)[1]
+                    arch = table.wrap(platform.archs(plat))[1]
                 end
                 if not arch then
                     arch = os.subarch()
