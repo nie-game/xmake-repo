@@ -6,6 +6,8 @@ package("imgui")
 
     add_urls("https://github.com/ocornut/imgui/archive/$(version).tar.gz",
              "https://github.com/ocornut/imgui.git")
+    add_versions("v1.89-docking", "94e850fd6ff9eceb98fda3147e3ffd4781ad2dc7")
+    add_versions("v1.89", "4038b05bd44c889cf40be999656d3871a0559916708cb52a6ae2fa6fa35c5c60")
     add_versions("v1.88-docking", "9cd9c2eff99877a3f10a7f9c2a3a5b9c15ea36c6")
     add_versions("v1.88", "9f14c788aee15b777051e48f868c5d4d959bd679fc5050e3d2a29de80d8fd32e")
     add_versions("v1.87-docking", "1ee252772ae9c0a971d06257bb5c89f628fa696a")
@@ -49,6 +51,7 @@ package("imgui")
         end
         if package:config("glfw_vulkan") then
             package:add("deps", "glfw")
+            package:add("deps", "vulkansdk")
         end
         if package:config("sdl2") then
             package:add("deps", "libsdl >=2.0.17")
@@ -66,7 +69,7 @@ package("imgui")
             glfw_vulkan  = package:config("glfw_vulkan"),
             sdl2         = package:config("sdl2"),
             user_config  = package:config("user_config"),
-            use_glad     = package:version():lt("1.84") -- this flag will be used if glfw_opengl3 is enabled
+            use_glad     = package:version() and package:version():lt("1.84") -- this flag will be used if glfw_opengl3 is enabled
         }
 
         os.cp(path.join(package:scriptdir(), "port", "xmake.lua"), "xmake.lua")

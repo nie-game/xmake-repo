@@ -39,7 +39,6 @@ package("boost")
     local libnames = {"fiber",
                       "coroutine",
                       "context",
-                      "thread",
                       "regex",
                       "system",
                       "container",
@@ -60,6 +59,7 @@ package("boost")
                       "graph_parallel",
                       "json",
                       "log",
+                      "thread",
                       "filesystem",
                       "math",
                       "mpi",
@@ -166,6 +166,10 @@ package("boost")
             "debug-symbols=" .. (package:debug() and "on" or "off"),
             "link=" .. (package:config("shared") and "shared" or "static")
         }
+
+        if package:config("lto") then
+            table.insert(argv, "lto=on")
+        end
         if package:is_arch(".+64.*") then
             table.insert(argv, "address-model=64")
         else
