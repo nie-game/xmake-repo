@@ -6,7 +6,7 @@ option("enable_tools")
 
 target("bz2")
     set_kind("$(kind)")
-    set_languages("c89")
+    set_languages("c20")
     add_headerfiles("bzlib.h")
     add_files("blocksort.c")
     add_files("bzlib.c")
